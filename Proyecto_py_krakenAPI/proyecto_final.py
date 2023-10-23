@@ -7,6 +7,7 @@ from bokeh.plotting import figure, column
 from bokeh.models import NumeralTickFormatter
 
 class App():
+    
     def __init__(self) -> None:
         self.kraken=krakenex.API()
         self.par_wsname=self.obtener_pares()
