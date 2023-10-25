@@ -5,6 +5,7 @@ import krakenex
 import datetime
 from bokeh.plotting import figure, column
 from bokeh.models import NumeralTickFormatter
+import talib as ta
 
 class App():
     
@@ -46,15 +47,15 @@ class App():
             st.write('Opciones del gráfico')
             divisa=st.selectbox(
                 'Par de divisas',
-                tuple(self.names)
+                ('BTC/EUR','BTC/USD','ETH/EUR','ETH/USD','ETH/BTC')
             )
             intervalo = st.selectbox(
                     'Intervalo',
                     ('1m', '15m', '30m','1h','24h'),
-                    index=4)
+                    index=0)
             indicadores = st.multiselect(
                     'Indicadores',
-                    ['VWAP', 'IND-B', 'IND-C', 'IND-D'],
+                    ['VWAP', 'STOCH', 'BANDS', 'IND-D'],
                     [],)
             
             vol=st.checkbox('Mostrar volumen')
@@ -79,41 +80,69 @@ class App():
             df['low']=df['low'].astype(float)
             df['volume']=df['volume'].astype(float)
             df['Cum_Vol'] = df.iloc[::-1]['volume'].cumsum()
-            df['m']=((df['high'] + df['low'] + df['close'])/3.0)
+            df['m']=(df['close'])*df['volume']
             df['m_cum']=df.iloc[::-1]['m'].cumsum()
             #df['Cum_Vol_Price'] = (df['volume'] * (df['high'] + df['low'] + df['close'] ) /3).cumsum()
             df['VWAP'] = df['m_cum'] / df['Cum_Vol']
-            print(df.head(2))
-            
+            df['slowk'],df['slowd']=ta.STOCH(df['high'],df['low'],df['close'],
+                                             slowk_period=3,slowk_matype=0,
+                                             slowd_period=3,slowd_matype=0)
+            df['upper_band'],_,df['lower_band']=ta.BBANDS(df['close'],timeperiod=20)            
             return df
         
         except KeyError:
             st.write('No se dispone de información del par de divisas escogido')
             return pd.DataFrame([])
 
-    def crear_graf(self,df,ind,vol):
-        df=df[:46][::-1]
+    def crear_graf(self,df,ind,vol,div):
+        df=df[::-1]
+        df_reduce=df[:46].copy()
+        start=df_reduce['Date'].values.min()
+        end=df_reduce['Date'].values.max()
         
         candle=figure(x_axis_type='datetime',height=300,x_range=(df['Date'].values[-1],df['Date'].values[0]),
                       tooltips=[('Date','@Date_str'),('open','@open'),('close','@close'),('high','@high'),('low','@low'),
-                                ('color','@color')],y_axis_label='Precio')
+                                ('color','@color')],y_axis_label='Precio',toolbar_location=None,
+                                title=f'{div}')
     
         candle.segment('Date','low','Date','high',color='black',line_width=.5,source=df)
         candle.segment('Date','open','Date','close',color='color',line_width=6,source=df)
-        if 'VWAP' in ind:
-            candle.line('Date', 'VWAP', line_color="blue", line_width=2, legend_label="VWAP-",source=df)
+        candle.title.align='center'
+        candle.title.text_font_size='16pt'
 
+        if 'VWAP' in ind:
+            candle.line('Date', 'VWAP', line_color="blue", line_width=.5, legend_label="VWAP-",source=df)
+        candle.x_range.start= start
+        candle.x_range.end= end
+        children=[candle]
         volumen=None
         if vol:
-            volumen=figure(x_axis_type='datetime',height=150,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='Volumen')
+            volumen=figure(x_axis_type='datetime',height=120,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='Volumen',
+                           toolbar_location=None)
             volumen.segment('Date',0,'Date','volume',color='color',line_width=6,source=df)
             volumen.yaxis.formatter = NumeralTickFormatter(format="0")
+            volumen.x_range=candle.x_range
+            children.append(volumen)
+        if 'STOCH' in ind:
+            estocast=figure(x_axis_type='datetime',height=100,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='STOCH',
+                            toolbar_location=None)
+            estocast.line('Date','slowk',line_color='blue',line_width=.5,legend_label='slowk',source=df)
+            estocast.line('Date','slowd',line_color='orange',line_width=.5,legend_label='slowd',source=df)
+            estocast.x_range=candle.x_range
+            children.append(estocast)
+        
+        if 'BANDS' in ind:
+            candle.line('Date','upper_band',line_color='green',line_width=.5,source=df)
+            candle.line('Date','lower_band',line_color='red',line_width=.5,source=df)
+            candle.varea('Date', 'upper_band', 'lower_band', fill_color="gray", alpha=0.5,source=df)
+
+            
 
 
-        return column(children=[candle,volumen],sizing_mode='scale_width') if volumen else candle
+        return column(children=children,sizing_mode='scale_width')
 
     def centro(self,fig):
-        st.header("INTERACTIVE TRADING VIEW", divider='rainbow')
+        st.header("INTERACTIVE TRADING VIEW     BTC & ETH", divider='rainbow')
         st.bokeh_chart(fig,use_container_width=True)
     
     def run(self):
@@ -121,7 +150,7 @@ class App():
         divisa, intervalo, indicadores, vol=self.barra_lat()
         dataframe=self.obt_datos(divisa,self.intervalos[intervalo])   #'XXBTZEUR'
         if not dataframe.empty:
-            fig=self.crear_graf(dataframe,indicadores,vol)
+            fig=self.crear_graf(dataframe,indicadores,vol,divisa)
             self.centro(fig)
 
 
