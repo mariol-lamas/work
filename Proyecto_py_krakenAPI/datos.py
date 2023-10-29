@@ -3,6 +3,7 @@ import datetime
 import pandas as pd
 #import streamlit as st
 import matplotlib.pyplot as plt
+import talib as ta
 # Crear una instancia del cliente Kraken
 #st.set_page_config(page_title='Cryptochange',layout='wide')
 
@@ -28,8 +29,12 @@ def crear_graf(df,mostrar_vol=False, indicadores=[]):
 pair = 'XXBTZEUR'  # Por ejemplo, Bitcoin (BTC) frente al dólar estadounidense (USD)
 interval = 1    # Intervalo de tiempo (1d para datos diarios)
 
-df=capturar_datos(pair,interval)
-print(df.head())
-df.to_csv('./BTC_cot.csv',sep=';',index=False)
-#st.write(df)
-print('listo')
+df=pd.read_csv('/Users/mariolamas/Desktop/work-1/Proyecto_py_krakenAPI/BTC_cot.csv',sep=';')
+print(df.keys())
+
+#print(ta.SMA(df['close'].values,8))
+df['RSI']=ta.MA(df['close'].values,10)
+print('\n',df.tail())
+
+print(capturar_datos(pair,interval))
+

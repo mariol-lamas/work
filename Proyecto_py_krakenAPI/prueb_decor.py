@@ -102,8 +102,36 @@ class Inspector:
     def inspect():
         ... 
 
+from functools import reduce
+from math import pow
 
+def closest_pair(points):
+    minimo=((points[0][0]-points[1][0])**2+(points[0][1]-points[1][1])**2)
+    valores=(points[0],points[1])
+    for id1,res1 in enumerate(points):
+        for id2,res2 in enumerate(points):
+            val=((res1[0]-res2[0])**2 + (res1[1]-res2[1])**2)
+            if minimo>val and (id1!=id2):
+                minimo=val
+                valores=(res1,res2)
+    return valores
+            
 
+points = (
+            (2, 2), # A
+            (2, 8), # B
+            (5, 5), # C
+            (6, 3), # D
+            (6, 7), # E
+            (7, 4), # F
+            (7, 9)  # G
+        )
+
+import time
+inicio=time.time()
+print(closest_pair(points))
+fin=time.time()
+print('Tiempo: ',fin-inicio)
 
 
 
