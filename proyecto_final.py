@@ -1,5 +1,4 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 import streamlit as st
 import krakenex
 import datetime
@@ -82,12 +81,7 @@ class App():
             df['m_cum']=df.iloc[::-1]['m'].cumsum()
             #df['Cum_Vol_Price'] = (df['volume'] * (df['high'] + df['low'] + df['close'] ) /3).cumsum()
             df['VWAP'] = df['m_cum'] / df['Cum_Vol']
-            '''
-            df['slowk'],df['slowd']=ta.STOCH(df['high'],df['low'],df['close'],
-                                             slowk_period=3,slowk_matype=0,
-                                             slowd_period=3,slowd_matype=0)
-            df['upper_band'],_,df['lower_band']=ta.BBANDS(df['close'],timeperiod=20)
-            '''            
+                     
             return df
         
         except KeyError:
@@ -123,20 +117,6 @@ class App():
             volumen.yaxis.formatter = NumeralTickFormatter(format="0")
             volumen.x_range=candle.x_range
             children.append(volumen)
-        '''
-        if 'STOCH' in ind:
-            estocast=figure(x_axis_type='datetime',height=100,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='STOCH',
-                            toolbar_location=None)
-            estocast.line('Date','slowk',line_color='blue',line_width=.5,legend_label='slowk',source=df)
-            estocast.line('Date','slowd',line_color='orange',line_width=.5,legend_label='slowd',source=df)
-            estocast.x_range=candle.x_range
-            children.append(estocast)
-        
-        if 'BANDS' in ind:
-            candle.line('Date','upper_band',line_color='green',line_width=.5,source=df)
-            candle.line('Date','lower_band',line_color='red',line_width=.5,source=df)
-            candle.varea('Date', 'upper_band', 'lower_band', fill_color="gray", alpha=0.5,source=df)
-        '''
             
 
 
@@ -154,8 +134,6 @@ class App():
             fig=self.crear_graf(dataframe,indicadores,vol,divisa)
             self.centro(fig)
 
-app=App()
-app.run()
 
 if __name__=='__main__':
     app=App()
