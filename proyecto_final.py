@@ -8,6 +8,7 @@ from bokeh.models import NumeralTickFormatter
 import requests
 import os
 import sys
+'''
 # check if the library folder already exists, to avoid building everytime you load the pahe
 if not os.path.isdir("/tmp/ta-lib"):
 
@@ -42,7 +43,7 @@ from ctypes import *
 
 lib = CDLL("/home/appuser/lib/libta_lib.so.0")
 import talib as ta
-
+'''
 class App():
     
     def __init__(self) -> None:
@@ -120,10 +121,12 @@ class App():
             df['m_cum']=df.iloc[::-1]['m'].cumsum()
             #df['Cum_Vol_Price'] = (df['volume'] * (df['high'] + df['low'] + df['close'] ) /3).cumsum()
             df['VWAP'] = df['m_cum'] / df['Cum_Vol']
+            '''
             df['slowk'],df['slowd']=ta.STOCH(df['high'],df['low'],df['close'],
                                              slowk_period=3,slowk_matype=0,
                                              slowd_period=3,slowd_matype=0)
-            df['upper_band'],_,df['lower_band']=ta.BBANDS(df['close'],timeperiod=20)            
+            df['upper_band'],_,df['lower_band']=ta.BBANDS(df['close'],timeperiod=20)
+            '''            
             return df
         
         except KeyError:
@@ -159,6 +162,7 @@ class App():
             volumen.yaxis.formatter = NumeralTickFormatter(format="0")
             volumen.x_range=candle.x_range
             children.append(volumen)
+        '''
         if 'STOCH' in ind:
             estocast=figure(x_axis_type='datetime',height=100,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='STOCH',
                             toolbar_location=None)
@@ -171,7 +175,7 @@ class App():
             candle.line('Date','upper_band',line_color='green',line_width=.5,source=df)
             candle.line('Date','lower_band',line_color='red',line_width=.5,source=df)
             candle.varea('Date', 'upper_band', 'lower_band', fill_color="gray", alpha=0.5,source=df)
-
+        '''
             
 
 
