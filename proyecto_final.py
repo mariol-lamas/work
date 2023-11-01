@@ -154,7 +154,8 @@ class App():
             fig=self.crear_graf(dataframe,indicadores,vol,divisa)
             self.centro(fig)
 
-
+app=App()
+app.run()
 
 if __name__=='__main__':
     app=App()
