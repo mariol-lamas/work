@@ -4,31 +4,12 @@ import krakenex
 import datetime
 from bokeh.plotting import figure, column
 from bokeh.models import NumeralTickFormatter
+import talib as ta
 class App():
     
     def __init__(self) -> None:
         self.kraken=krakenex.API()
-        self.par_wsname=self.obtener_pares()
-        self.names=self.par_wsname.keys()
         self.intervalos={'1m':1,'15m':15,'30m':30,'1h':60,'24h':60*24}
-               
-
-    def obtener_pares(self):
-        '''
-        Función encargada de la obtención de los pares de divisas disponibles
-        en la API de Kraken.
-
-        Devuelve el nombre del par en 2 formatos:
-        Wsname --> BTC / EUR
-        Nombre_técnico --> 
-        '''
-        result=self.kraken.query_public('AssetPairs')['result']
-        valores = result.keys()
-
-        dic={}
-        for elem in valores:
-            dic[result[elem]['wsname']]=elem
-        return dic
     
     def barra_lat(self):
         '''
@@ -52,13 +33,39 @@ class App():
                     index=0)
             indicadores = st.multiselect(
                     'Indicadores',
-                    ['VWAP', 'STOCH', 'BANDS', 'IND-D'],
+                    ['VWAP', 'STOCH', 'BANDS'],
                     [],)
             
             vol=st.checkbox('Mostrar volumen')
         return divisa,intervalo,indicadores, vol
     
-    def obt_datos(self,par,intervalo):
+    def calc_stoch(self,df,n,smooth_k,smooth_d):
+        # Calcular el %K
+        low_min = df['low'].rolling(n).min()
+        high_max = df['high'].rolling(n).max()
+        df['%K'] = ((df['close'] - low_min) / (high_max - low_min)) * 100
+
+        # Aplicar un suavizado a %K
+        df['%K_Smooth'] = df['%K'].rolling(smooth_k).mean()
+
+        # Calcular %D
+        df['%D'] = df['%K_Smooth'].rolling(smooth_d).mean()
+        return df
+    
+    def calc_bbands(self,df, window=20, num_std_dev=2):
+        # Calcular la media móvil simple (banda central)
+        df['SMA'] = df['close'].rolling(window=window).mean()
+        
+        # Calcular la desviación estándar (volatilidad)
+        df['STD'] = df['close'].rolling(window=window).std()
+        
+        # Calcular las bandas de Bollinger
+        df['banda_sup'] = df['SMA'] + (df['STD'] * num_std_dev)
+        df['banda_inf'] = df['SMA'] - (df['STD'] * num_std_dev)
+        
+        return df
+    
+    def obt_datos(self,par,intervalo,ind):
         '''
         Se encarga de realizar la query a la API de kraken para obtener los datos a partir del par de divisas
         y del intervalo de datos ya que estas queries devuelven un máximo de 720 valores.
@@ -76,12 +83,16 @@ class App():
             df['high']=df['high'].astype(float)
             df['low']=df['low'].astype(float)
             df['volume']=df['volume'].astype(float)
-            df['Cum_Vol'] = df.iloc[::-1]['volume'].cumsum()
-            df['m']=(df['close'])*df['volume']
-            df['m_cum']=df.iloc[::-1]['m'].cumsum()
-            #df['Cum_Vol_Price'] = (df['volume'] * (df['high'] + df['low'] + df['close'] ) /3).cumsum()
-            df['VWAP'] = df['m_cum'] / df['Cum_Vol']
-                     
+            if 'VWAP' in ind:
+                df['Cum_Vol'] = df.iloc[::-1]['volume'].cumsum()
+                df['m']=(df['close'])*df['volume']
+                df['m_cum']=df.iloc[::-1]['m'].cumsum()
+                df['VWAP'] = df['m_cum'] / df['Cum_Vol']
+
+            if 'STOCH' in ind:
+                df = self.calc_stoch(df,14,3,3)
+            if 'BANDS' in ind:
+                df = self.calc_bbands(df)
             return df
         
         except KeyError:
@@ -93,6 +104,8 @@ class App():
         df_reduce=df[:46].copy()
         start=df_reduce['Date'].values.min()
         end=df_reduce['Date'].values.max()
+        start_y= df_reduce['low'].values.min() -100
+        end_y=df_reduce['high'].values.max() +100
         
         candle=figure(x_axis_type='datetime',height=300,x_range=(df['Date'].values[-1],df['Date'].values[0]),
                       tooltips=[('Date','@Date_str'),('open','@open'),('close','@close'),('high','@high'),('low','@low'),
@@ -108,6 +121,8 @@ class App():
             candle.line('Date', 'VWAP', line_color="blue", line_width=.5, legend_label="VWAP-",source=df)
         candle.x_range.start= start
         candle.x_range.end= end
+        candle.y_range.start=start_y
+        candle.y_range.end = end_y
         children=[candle]
         volumen=None
         if vol:
@@ -117,7 +132,18 @@ class App():
             volumen.yaxis.formatter = NumeralTickFormatter(format="0")
             volumen.x_range=candle.x_range
             children.append(volumen)
-            
+        
+        if 'STOCH' in ind:
+            estocast=figure(x_axis_type='datetime',height=100,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='STOCH',
+                            toolbar_location=None)
+            estocast.line('Date','%K_Smooth',line_color='blue',line_width=.5,legend_label='slowk',source=df)
+            estocast.line('Date','%D',line_color='orange',line_width=.5,legend_label='slowd',source=df)
+            estocast.x_range=candle.x_range
+            children.append(estocast)
+        if 'BANDS' in ind:
+            candle.line('Date','banda_sup',line_color='green',line_width=.5,source=df)
+            candle.line('Date','banda_inf',line_color='red',line_width=.5,source=df)
+            candle.varea('Date', 'banda_sup', 'banda_inf', fill_color="gray", alpha=0.5,source=df)
 
 
         return column(children=children,sizing_mode='scale_width')
@@ -129,7 +155,7 @@ class App():
     def run(self):
         st.set_page_config(page_title='INTERACTIVE TRADING VIEW') 
         divisa, intervalo, indicadores, vol=self.barra_lat()
-        dataframe=self.obt_datos(divisa,self.intervalos[intervalo])   #'XXBTZEUR'
+        dataframe=self.obt_datos(divisa,self.intervalos[intervalo],indicadores)   #'XXBTZEUR'
         if not dataframe.empty:
             fig=self.crear_graf(dataframe,indicadores,vol,divisa)
             self.centro(fig)
