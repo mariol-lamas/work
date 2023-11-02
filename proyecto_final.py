@@ -4,7 +4,6 @@ import krakenex
 import datetime
 from bokeh.plotting import figure, column
 from bokeh.models import NumeralTickFormatter
-import talib as ta
 class App():
     
     def __init__(self) -> None:
