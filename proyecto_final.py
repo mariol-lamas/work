@@ -4,6 +4,20 @@ import krakenex
 import datetime
 from bokeh.plotting import figure, column
 from bokeh.models import NumeralTickFormatter
+import unittest
+
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.divisas=('BTC/EUR','BTC/USD','ETH/EUR','ETH/USD','ETH/BTC')
+        self.intervalos=(1,15,30,60,60*24)
+    
+    def test_obtencion_datos(self):
+        app=App()
+        for divisa in self.divisas:
+            for interval in self.intervalos:
+                df=app.obt_datos(divisa,interval,[])
+                self.assertEqual(df.empty,False,f'No se han recibido datos para la divisa {divisa} ')
+        
 class App():
     
     def __init__(self) -> None:
@@ -160,7 +174,9 @@ class App():
             self.centro(fig)
 
 
+
 if __name__=='__main__':
     app=App()
     app.run()
+    
 
