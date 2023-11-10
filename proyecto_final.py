@@ -20,7 +20,7 @@ class Test(unittest.TestCase):
         
 class App():
     
-    def __init__(self) -> None:
+    def __init__(self):
         self.kraken=krakenex.API()
         self.intervalos={'1m':1,'15m':15,'30m':30,'1h':60,'24h':60*24}
     
@@ -96,6 +96,7 @@ class App():
             df['high']=df['high'].astype(float)
             df['low']=df['low'].astype(float)
             df['volume']=df['volume'].astype(float)
+
             if 'VWAP' in ind:
                 df['Cum_Vol'] = df.iloc[::-1]['volume'].cumsum()
                 df['m']=(df['close'])*df['volume']
