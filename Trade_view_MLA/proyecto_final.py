@@ -158,8 +158,7 @@ class App():
             candle.line('Date','banda_sup',line_color='green',line_width=.5,source=df)
             candle.line('Date','banda_inf',line_color='red',line_width=.5,source=df)
             candle.varea('Date', 'banda_sup', 'banda_inf', fill_color="gray", alpha=0.5,source=df)
-
-
+            
         return column(children=children,sizing_mode='scale_width')
 
     def centro(self,fig):
