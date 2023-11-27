@@ -10,13 +10,16 @@ class Test(unittest.TestCase):
     def setUp(self):
         self.divisas=('BTC/EUR','BTC/USD','ETH/EUR','ETH/USD','ETH/BTC')
         self.intervalos=(1,15,30,60,60*24)
+        self.columnas=['timestamp', 'open', 'high','low','close','_','volume','conteo']
+        self.app=App()
     
     def test_obtencion_datos(self):
-        app=App()
         for divisa in self.divisas:
             for interval in self.intervalos:
-                df=app.obt_datos(divisa,interval,[])
+                df=self.app.obt_datos(divisa,interval,[])
                 self.assertEqual(df.empty,False,f'No se han recibido datos para la divisa {divisa} ')
+                for col in self.columnas:
+                    self.assertIn(col,df.columns,f'La columna {col} no existe en el DataFrame')
         
 class App():
     
@@ -130,15 +133,16 @@ class App():
         candle.segment('Date','open','Date','close',color='color',line_width=6,source=df)
         candle.title.align='center'
         candle.title.text_font_size='16pt'
-
-        if 'VWAP' in ind:
-            candle.line('Date', 'VWAP', line_color="blue", line_width=.5, legend_label="VWAP-",source=df)
         candle.x_range.start= start
         candle.x_range.end= end
         candle.y_range.start=start_y
         candle.y_range.end = end_y
         children=[candle]
-        volumen=None
+
+        if 'VWAP' in ind:
+            candle.line('Date', 'VWAP', line_color="blue", line_width=.5, legend_label="VWAP-",source=df)
+        
+        
         if vol:
             volumen=figure(x_axis_type='datetime',height=120,x_range=(df['Date'].values[-1],df['Date'].values[0]),y_axis_label='Volumen',
                            toolbar_location=None)
@@ -178,5 +182,6 @@ class App():
 if __name__=='__main__':
     app=App()
     app.run()
+    unittest.main()
     
 
