@@ -41,7 +41,7 @@ class App():
             st.write('Opciones del gráfico')
             divisa=st.selectbox(
                 'Par de divisas',
-                ('BTC/EUR','BTC/USD','ETH/EUR','ETH/USD','ETH/BTC')
+                ('BTC/EUR','BTC/USD','ETH/EUR','ETH/USD')
             )
             intervalo = st.selectbox(
                     'Intervalo',
@@ -53,6 +53,7 @@ class App():
                     [],)
             
             vol=st.checkbox('Mostrar volumen')
+            self.test=st.checkbox('Realizar test')
         return divisa,intervalo,indicadores, vol
     
     def calc_stoch(self,df,n,smooth_k,smooth_d):
@@ -91,7 +92,8 @@ class App():
         try:
             ohlc_list = ohlc_data['result']
             df=pd.DataFrame(ohlc_list[par],columns=['timestamp', 'open', 'high','low','close','_','volume','conteo'])
-            df['Date']=df['timestamp'].map(lambda x: datetime.datetime.fromtimestamp(x))
+            #df['Date']=df['timestamp'].map(lambda x: datetime.datetime.fromtimestamp(x))
+            df['Date']=pd.to_datetime(df['timestamp'],unit='s')
             df['Date_str']=df['Date'].astype(str)
             df['color']=df[['close','open']].apply(lambda x: 'red' if x.open>x.close else 'green',axis=1 )
             df['open']=df['open'].astype(float)
@@ -121,8 +123,8 @@ class App():
         df_reduce=df[:46].copy()
         start=df_reduce['Date'].values.min()
         end=df_reduce['Date'].values.max()
-        start_y= df_reduce['low'].values.min() -100
-        end_y=df_reduce['high'].values.max() +100
+        start_y= int(df_reduce['low'].values.min())*0.999
+        end_y=int(df_reduce['high'].values.max())*1.001
         
         candle=figure(x_axis_type='datetime',height=300,x_range=(df['Date'].values[-1],df['Date'].values[0]),
                       tooltips=[('Date','@Date_str'),('open','@open'),('close','@close'),('high','@high'),('low','@low'),
@@ -176,12 +178,20 @@ class App():
         if not dataframe.empty:
             fig=self.crear_graf(dataframe,indicadores,vol,divisa)
             self.centro(fig)
+        if self.test:
+            try:
+                test=Test()
+                test.setUp()
+                test.test_obtencion_datos()
+                st.write('Todo ha ido correcto')
+            except AssertionError:
+                st.write('\n Han ocurrido errores durante el testeo')
 
 
 
 if __name__=='__main__':
     app=App()
     app.run()
-    unittest.main()
+    
     
 
